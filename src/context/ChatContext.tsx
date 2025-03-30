@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useSocket } from './SocketContext';
 import { useToast } from '@/components/ui/use-toast';
@@ -215,10 +216,25 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
       
       // Convert presence state to user array
       const onlineUsers: User[] = [];
+      
+      // Process each presence in the state object
       Object.keys(newState).forEach(key => {
-        newState[key].forEach((presence: User) => {
-          if (presence.id !== userId) {
-            onlineUsers.push(presence);
+        // Each presence entry contains an array of presence objects
+        const presences = newState[key] as unknown as Array<any>;
+        
+        // Process each presence object in the array
+        presences.forEach((presenceData) => {
+          // Only extract and process if it has the expected properties
+          if (presenceData && typeof presenceData === 'object' && 
+              'id' in presenceData && 'username' in presenceData) {
+            
+            // Skip ourselves
+            if (presenceData.id !== userId) {
+              onlineUsers.push({
+                id: presenceData.id,
+                username: presenceData.username
+              });
+            }
           }
         });
       });
@@ -234,7 +250,7 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       // No need to explicitly remove listeners, as they'll be cleaned up when the socket is unsubscribed
     };
-  }, [socket, userId, generateId]);
+  }, [socket, userId]);
 
   return (
     <ChatContext.Provider
