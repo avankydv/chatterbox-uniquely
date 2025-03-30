@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useSocket } from './SocketContext';
 import { useToast } from '@/components/ui/use-toast';
@@ -49,6 +48,7 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [userId, setUserId] = useState('');
 
   const generateId = () => {
     return Math.random().toString(36).substring(2, 9);
@@ -73,13 +73,17 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
       return;
     }
 
-    const userId = generateId();
+    const newUserId = generateId();
+    setUserId(newUserId);
     
-    // Emit join event to server
-    socket.emit('join', { userId, username });
+    // Track presence with Supabase Realtime
+    socket.track({
+      id: newUserId,
+      username: username
+    });
     
     // Add self to users list
-    setUsers(prev => [...prev, { id: userId, username }]);
+    setUsers(prev => [...prev, { id: newUserId, username }]);
     
     // Add join notification to messages
     setMessages(prev => [
@@ -104,8 +108,10 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
 
   const logout = () => {
     if (socket && connected) {
-      socket.emit('leave', { username });
+      // Untrack presence to indicate user left
+      socket.untrack();
     }
+    
     setIsLoggedIn(false);
     setUsers([]);
     setMessages([]);
@@ -117,13 +123,18 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
     const message = {
       id: generateId(),
       text,
-      userId: socket.id,
+      userId,
       username,
       timestamp: Date.now(),
       type: 'message' as const
     };
     
-    socket.emit('message', message);
+    // Send message via Supabase Realtime broadcast
+    socket.send({
+      type: 'broadcast',
+      event: 'message',
+      payload: message
+    });
     
     // Add message to local state
     setMessages(prev => [...prev, message]);
@@ -132,62 +143,98 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     if (!socket) return;
 
-    // Listen for new users
-    socket.on('user_joined', (user: User) => {
-      setUsers(prev => [...prev, user]);
-      setMessages(prev => [
-        ...prev,
-        {
-          id: generateId(),
-          text: `${user.username} joined the chat`,
-          userId: 'system',
-          username: 'System',
-          timestamp: Date.now(),
-          type: 'notification'
-        }
-      ]);
+    // Listen for messages and user events via Supabase Realtime broadcast
+    const broadcastListener = socket.on('broadcast', { event: 'message' }, (payload) => {
+      const message = payload.payload;
+      
+      // Only add messages from other users (not our own, since we already added those)
+      if (message.userId !== userId) {
+        setMessages(prev => [...prev, message]);
+      }
     });
 
-    // Listen for users leaving
-    socket.on('user_left', (user: User) => {
-      setUsers(prev => prev.filter(u => u.id !== user.id));
-      setMessages(prev => [
-        ...prev,
-        {
-          id: generateId(),
-          text: `${user.username} left the chat`,
-          userId: 'system',
-          username: 'System',
-          timestamp: Date.now(),
-          type: 'notification'
-        }
-      ]);
+    // Listen for user joined events
+    const userJoinedListener = socket.on('broadcast', { event: 'user_joined' }, (payload) => {
+      const user = payload.payload;
+      
+      // Don't add ourselves again
+      if (user.id !== userId) {
+        setUsers(prev => {
+          // Check if user is already in the list
+          if (!prev.some(u => u.id === user.id)) {
+            setMessages(prev => [
+              ...prev,
+              {
+                id: generateId(),
+                text: `${user.username} joined the chat`,
+                userId: 'system',
+                username: 'System',
+                timestamp: Date.now(),
+                type: 'notification'
+              }
+            ]);
+            return [...prev, user];
+          }
+          return prev;
+        });
+      }
     });
 
-    // Listen for new messages
-    socket.on('message', (message: Message) => {
-      setMessages(prev => [...prev, message]);
+    // Listen for user left events
+    const userLeftListener = socket.on('broadcast', { event: 'user_left' }, (payload) => {
+      const user = payload.payload;
+      
+      // Don't handle our own leave event
+      if (user.id !== userId) {
+        setUsers(prev => {
+          const newUsers = prev.filter(u => u.id !== user.id);
+          
+          // Only add the notification if the user was actually removed
+          if (newUsers.length < prev.length) {
+            setMessages(prev => [
+              ...prev,
+              {
+                id: generateId(),
+                text: `${user.username} left the chat`,
+                userId: 'system',
+                username: 'System',
+                timestamp: Date.now(),
+                type: 'notification'
+              }
+            ]);
+          }
+          
+          return newUsers;
+        });
+      }
     });
 
-    // Listen for active users
-    socket.on('active_users', (activeUsers: User[]) => {
-      setUsers(activeUsers);
+    // When a user joins, sync with existing users in the channel
+    socket.on('presence', { event: 'sync' }, () => {
+      const newState = socket.presenceState();
+      
+      // Convert presence state to user array
+      const onlineUsers: User[] = [];
+      Object.keys(newState).forEach(key => {
+        newState[key].forEach((presence: User) => {
+          if (presence.id !== userId) {
+            onlineUsers.push(presence);
+          }
+        });
+      });
+      
+      // Update users state with online users
+      setUsers(prev => {
+        // Keep our user and add other online users
+        const ourUser = prev.find(u => u.id === userId);
+        return ourUser ? [ourUser, ...onlineUsers] : onlineUsers;
+      });
     });
 
-    // Listen for message history
-    socket.on('message_history', (history: Message[]) => {
-      setMessages(history);
-    });
-
-    // Cleanup
     return () => {
-      socket.off('user_joined');
-      socket.off('user_left');
-      socket.off('message');
-      socket.off('active_users');
-      socket.off('message_history');
+      // No need to explicitly remove listeners, as they'll be cleaned up when the socket is unsubscribed
     };
-  }, [socket, generateId]);
+  }, [socket, userId, generateId]);
 
   return (
     <ChatContext.Provider
