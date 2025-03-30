@@ -21,11 +21,11 @@ const MobileDrawer = () => {
       <Sheet>
         <SheetTrigger asChild>
           <Button size="icon" className="rounded-full h-12 w-12 shadow-lg bg-chat-primary hover:bg-chat-secondary">
-            <Menu className="h-6 w-6" />
+            <Menu className="h-6 w-6 text-white" />
           </Button>
         </SheetTrigger>
-        <SheetContent side="right" className="w-[300px] sm:w-[400px] p-0">
-          <SheetHeader className="p-4 border-b">
+        <SheetContent side="right" className="w-[85vw] sm:w-[400px] p-0">
+          <SheetHeader className="p-4 border-b border-border">
             <SheetTitle>ChatterBox</SheetTitle>
             <SheetDescription>
               <div className="flex gap-2 mt-2">

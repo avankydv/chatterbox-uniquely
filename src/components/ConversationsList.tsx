@@ -6,7 +6,7 @@ const ConversationsList = () => {
   const { conversations, switchConversation, targetUsername } = useChat();
 
   return (
-    <div className="h-full bg-white border-l border-gray-200 w-full md:w-64 p-4 overflow-auto">
+    <div className="h-full bg-card border-l border-border w-full md:w-64 p-4 overflow-auto">
       <div className="flex items-center gap-2 mb-4">
         <MessageCircle className="h-5 w-5 text-chat-primary" />
         <h2 className="font-semibold text-lg">Conversations ({conversations.length})</h2>
@@ -27,7 +27,7 @@ const ConversationsList = () => {
         ))}
 
         {conversations.length === 0 && (
-          <li className="text-gray-500 text-sm italic">No active conversations</li>
+          <li className="text-muted-foreground text-sm italic">No active conversations</li>
         )}
       </ul>
     </div>

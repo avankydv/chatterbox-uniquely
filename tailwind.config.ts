@@ -54,14 +54,14 @@ export default {
 					foreground: 'hsl(var(--card-foreground))'
 				},
 				chat: {
-					primary: '#9b87f5',
-					secondary: '#7E69AB',
-					tertiary: '#E5DEFF',
-					user1: '#E5DEFF',
-					user2: '#D6BCFA',
-					user3: '#C3DAFE',
-					user4: '#E6FFFA',
-					user5: '#FEFCBF',
+					primary: 'var(--chat-primary)',
+					secondary: 'var(--chat-secondary)',
+					tertiary: 'var(--chat-tertiary)',
+					user1: 'var(--chat-user1)',
+					user2: 'var(--chat-user2)',
+					user3: 'var(--chat-user3)',
+					user4: 'var(--chat-user4)',
+					user5: 'var(--chat-user5)',
 				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',

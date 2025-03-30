@@ -20,7 +20,7 @@ const MessageInput = () => {
   return (
     <form 
       onSubmit={handleSubmit} 
-      className="p-4 border-t border-gray-200 bg-white"
+      className="p-4 border-t border-border bg-card"
     >
       <div className="flex space-x-2">
         <Input

@@ -29,7 +29,7 @@ const MessageList = () => {
     if (isNotification) {
       return (
         <div key={message.id} className="flex justify-center my-2">
-          <div className="bg-gray-100 px-4 py-2 rounded-full text-sm text-gray-600">
+          <div className="bg-muted text-muted-foreground px-4 py-2 rounded-full text-sm">
             {message.text}
           </div>
         </div>
@@ -46,19 +46,19 @@ const MessageList = () => {
         <div className={`max-w-xs md:max-w-md lg:max-w-lg ${isCurrentUser ? 'order-1' : 'order-2'}`}>
           <div className="flex items-end">
             {!isCurrentUser && (
-              <div className="flex flex-col items-start mr-2 text-xs text-gray-500">
+              <div className="flex flex-col items-start mr-2 text-xs text-muted-foreground">
                 <span>{message.username}</span>
               </div>
             )}
             <div 
               className={`px-4 py-2 rounded-lg ${
                 isCurrentUser 
-                  ? 'bg-chat-primary text-white rounded-br-none' 
-                  : `bg-${userColor} text-gray-800 rounded-bl-none`
+                  ? 'bg-chat-primary text-primary-foreground rounded-br-none' 
+                  : `bg-${userColor} text-foreground rounded-bl-none`
               }`}
             >
               <p>{message.text}</p>
-              <div className={`text-xs mt-1 ${isCurrentUser ? 'text-gray-200' : 'text-gray-500'}`}>
+              <div className={`text-xs mt-1 ${isCurrentUser ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
                 {format(new Date(message.timestamp), 'HH:mm')}
               </div>
             </div>
@@ -69,10 +69,10 @@ const MessageList = () => {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-2">
+    <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-background">
       {messages.length === 0 ? (
         <div className="flex h-full items-center justify-center">
-          <p className="text-gray-400">No messages yet. Start the conversation!</p>
+          <p className="text-muted-foreground">No messages yet. Start the conversation!</p>
         </div>
       ) : (
         messages.map(renderMessage)

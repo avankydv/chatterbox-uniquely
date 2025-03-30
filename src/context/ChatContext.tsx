@@ -73,6 +73,8 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [userId, setUserId] = useState('');
+  // Track processed message IDs to prevent duplicates
+  const [processedMessageIds, setProcessedMessageIds] = useState<Set<string>>(new Set());
 
   const generateId = () => {
     return Math.random().toString(36).substring(2, 9);
@@ -279,6 +281,9 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
         return conv;
       })
     );
+    
+    // Add to processed message IDs to prevent duplicates
+    setProcessedMessageIds(prev => new Set(prev).add(message.id));
   };
 
   useEffect(() => {
@@ -288,10 +293,18 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
     const broadcastListener = socket.on('broadcast', { event: 'message' }, (payload) => {
       const message = payload.payload;
       
+      // Check if we've already processed this message
+      if (processedMessageIds.has(message.id)) {
+        return;
+      }
+      
       // Only add messages from other users (not our own, since we already added those)
       if (message.userId !== userId) {
         // Check if this message is for us
         if (message.targetUsername === username) {
+          // Add to processed message IDs
+          setProcessedMessageIds(prev => new Set(prev).add(message.id));
+          
           // Add to appropriate conversation or create new one
           const senderUsername = message.username;
           
@@ -427,7 +440,7 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       // No need to explicitly remove listeners, as they'll be cleaned up when the socket is unsubscribed
     };
-  }, [socket, userId, username, targetUsername, toast]);
+  }, [socket, userId, username, targetUsername, toast, processedMessageIds]);
 
   return (
     <ChatContext.Provider

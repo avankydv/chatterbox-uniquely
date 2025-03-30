@@ -1,3 +1,4 @@
+
 import { useChat } from '@/context/ChatContext';
 import { Users } from 'lucide-react';
 
@@ -17,7 +18,7 @@ const UserList = () => {
   };
 
   return (
-    <div className="h-full bg-white border-l border-gray-200 w-full md:w-64 p-4 overflow-auto">
+    <div className="h-full bg-card border-l border-border w-full md:w-64 p-4 overflow-auto">
       <div className="flex items-center gap-2 mb-4">
         <Users className="h-5 w-5 text-chat-primary" />
         <h2 className="font-semibold text-lg">Online Users ({users.length})</h2>
@@ -38,7 +39,7 @@ const UserList = () => {
         ))}
 
         {users.length === 0 && (
-          <li className="text-gray-500 text-sm italic">No users online</li>
+          <li className="text-muted-foreground text-sm italic">No users online</li>
         )}
       </ul>
     </div>
