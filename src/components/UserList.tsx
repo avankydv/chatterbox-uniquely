@@ -1,9 +1,20 @@
-
 import { useChat } from '@/context/ChatContext';
 import { Users } from 'lucide-react';
 
 const UserList = () => {
-  const { users } = useChat();
+  const { users, targetUsername, isInChat, startChat, setTargetUsername, switchConversation } = useChat();
+
+  const handleUserClick = (username: string) => {
+    setTargetUsername(username);
+    
+    if (isInChat) {
+      // If already in a chat, switch conversation
+      switchConversation(username);
+    } else {
+      // Otherwise start a new chat
+      startChat();
+    }
+  };
 
   return (
     <div className="h-full bg-white border-l border-gray-200 w-full md:w-64 p-4 overflow-auto">
@@ -16,7 +27,10 @@ const UserList = () => {
         {users.map((user) => (
           <li 
             key={user.id} 
-            className="px-3 py-2 rounded-md bg-chat-tertiary flex items-center"
+            className={`px-3 py-2 rounded-md flex items-center cursor-pointer hover:bg-chat-secondary/20 ${
+              targetUsername === user.username ? 'bg-chat-primary/10 font-medium' : 'bg-chat-tertiary'
+            }`}
+            onClick={() => handleUserClick(user.username)}
           >
             <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
             <span>{user.username}</span>

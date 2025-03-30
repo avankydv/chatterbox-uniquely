@@ -15,6 +15,12 @@ export interface Message {
   username: string;
   timestamp: number;
   type: 'message' | 'notification';
+  targetUsername?: string;
+}
+
+interface Conversation {
+  partnerUsername: string;
+  messages: Message[];
 }
 
 interface ChatContextType {
@@ -27,8 +33,10 @@ interface ChatContextType {
   login: () => void;
   logout: () => void;
   startChat: () => void;
+  switchConversation: (username: string) => void;
   users: User[];
   messages: Message[];
+  conversations: Conversation[];
   sendMessage: (text: string) => void;
   checkUsernameAvailability: (username: string) => Promise<boolean>;
 }
@@ -43,8 +51,10 @@ const ChatContext = createContext<ChatContextType>({
   login: () => {},
   logout: () => {},
   startChat: () => {},
+  switchConversation: () => {},
   users: [],
   messages: [],
+  conversations: [],
   sendMessage: () => {},
   checkUsernameAvailability: async () => true,
 });
@@ -61,6 +71,7 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   const [isInChat, setIsInChat] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [userId, setUserId] = useState('');
 
   const generateId = () => {
@@ -140,7 +151,20 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
       return;
     }
 
-    setIsInChat(true);
+    // Check if conversation already exists
+    if (!conversations.some(conv => conv.partnerUsername === targetUsername)) {
+      // Create a new conversation
+      setConversations(prev => [...prev, {
+        partnerUsername: targetUsername,
+        messages: []
+      }]);
+    }
+
+    // Set current messages to the selected conversation
+    const conversationMessages = conversations.find(
+      conv => conv.partnerUsername === targetUsername
+    )?.messages || [];
+    
     setMessages([
       {
         id: generateId(),
@@ -149,12 +173,60 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
         username: 'System',
         timestamp: Date.now(),
         type: 'notification'
-      }
+      },
+      ...conversationMessages
     ]);
+    
+    setIsInChat(true);
     
     toast({
       title: "Chat started",
       description: `You are now chatting with ${targetUsername}`,
+    });
+  };
+
+  const switchConversation = (partnerUsername: string) => {
+    setTargetUsername(partnerUsername);
+    
+    // Get conversation messages or create a new conversation
+    const conversation = conversations.find(
+      conv => conv.partnerUsername === partnerUsername
+    );
+    
+    if (conversation) {
+      setMessages([
+        {
+          id: generateId(),
+          text: `You switched to chat with ${partnerUsername}`,
+          userId: 'system',
+          username: 'System',
+          timestamp: Date.now(),
+          type: 'notification'
+        },
+        ...conversation.messages
+      ]);
+    } else {
+      setMessages([
+        {
+          id: generateId(),
+          text: `You started a chat with ${partnerUsername}`,
+          userId: 'system',
+          username: 'System',
+          timestamp: Date.now(),
+          type: 'notification'
+        }
+      ]);
+      
+      // Create a new conversation
+      setConversations(prev => [...prev, {
+        partnerUsername,
+        messages: []
+      }]);
+    }
+    
+    toast({
+      title: "Chat switched",
+      description: `You are now chatting with ${partnerUsername}`,
     });
   };
 
@@ -169,10 +241,11 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
     setTargetUsername('');
     setUsers([]);
     setMessages([]);
+    setConversations([]);
   };
 
   const sendMessage = (text: string) => {
-    if (!text.trim() || !socket || !connected || !isLoggedIn || !isInChat) return;
+    if (!text.trim() || !socket || !connected || !isLoggedIn || !isInChat || !targetUsername) return;
     
     const message = {
       id: generateId(),
@@ -193,6 +266,19 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
     
     // Add message to local state
     setMessages(prev => [...prev, message]);
+    
+    // Update the conversation
+    setConversations(prev => 
+      prev.map(conv => {
+        if (conv.partnerUsername === targetUsername) {
+          return {
+            ...conv,
+            messages: [...conv.messages, message]
+          };
+        }
+        return conv;
+      })
+    );
   };
 
   useEffect(() => {
@@ -203,11 +289,45 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
       const message = payload.payload;
       
       // Only add messages from other users (not our own, since we already added those)
-      // And only if it's meant for us or from the user we're chatting with
-      if (message.userId !== userId && 
-         ((message.targetUsername === username && message.username === targetUsername) || 
-          (message.username === targetUsername && !message.targetUsername))) {
-        setMessages(prev => [...prev, message]);
+      if (message.userId !== userId) {
+        // Check if this message is for us
+        if (message.targetUsername === username) {
+          // Add to appropriate conversation or create new one
+          const senderUsername = message.username;
+          
+          setConversations(prev => {
+            const existingConversationIndex = prev.findIndex(
+              conv => conv.partnerUsername === senderUsername
+            );
+            
+            if (existingConversationIndex >= 0) {
+              // Update existing conversation
+              const newConversations = [...prev];
+              newConversations[existingConversationIndex] = {
+                ...newConversations[existingConversationIndex],
+                messages: [...newConversations[existingConversationIndex].messages, message]
+              };
+              return newConversations;
+            } else {
+              // Create new conversation
+              return [...prev, {
+                partnerUsername: senderUsername,
+                messages: [message]
+              }];
+            }
+          });
+          
+          // If this is from our current chat partner, add to current messages
+          if (senderUsername === targetUsername) {
+            setMessages(prev => [...prev, message]);
+          } else {
+            // Notify about new message from someone else
+            toast({
+              title: "New message",
+              description: `You received a message from ${senderUsername}`,
+            });
+          }
+        }
       }
     });
 
@@ -307,7 +427,7 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       // No need to explicitly remove listeners, as they'll be cleaned up when the socket is unsubscribed
     };
-  }, [socket, userId, username, targetUsername]);
+  }, [socket, userId, username, targetUsername, toast]);
 
   return (
     <ChatContext.Provider
@@ -321,8 +441,10 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
         login,
         logout,
         startChat,
+        switchConversation,
         users,
         messages,
+        conversations,
         sendMessage,
         checkUsernameAvailability
       }}

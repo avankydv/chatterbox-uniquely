@@ -43,7 +43,7 @@ const SelectChatPartner = () => {
       <Card className="w-full max-w-md shadow-lg animate-fade-in">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl font-bold text-chat-primary">ChatterBox</CardTitle>
-          <CardDescription>Who would you like to chat with?</CardDescription>
+          <CardDescription>Start chatting with any online user</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent>
