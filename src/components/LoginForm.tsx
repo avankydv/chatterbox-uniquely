@@ -5,16 +5,50 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useChat } from '@/context/ChatContext';
 import { useSocket } from '@/context/SocketContext';
+import { useToast } from '@/components/ui/use-toast';
 
 const LoginForm = () => {
-  const { username, setUsername, login } = useChat();
+  const { username, setUsername, login, checkUsernameAvailability } = useChat();
   const { connected } = useSocket();
   const [inputValue, setInputValue] = useState('');
+  const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+  const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setUsername(inputValue);
-    login();
+    
+    if (inputValue.trim().length < 2) {
+      toast({
+        title: "Invalid username",
+        description: "Username must be at least 2 characters long",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsCheckingUsername(true);
+    
+    try {
+      const isAvailable = await checkUsernameAvailability(inputValue);
+      if (isAvailable) {
+        setUsername(inputValue);
+        login();
+      } else {
+        toast({
+          title: "Username unavailable",
+          description: "This username is already taken. Please choose another one.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to check username availability",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCheckingUsername(false);
+    }
   };
 
   return (
@@ -48,9 +82,9 @@ const LoginForm = () => {
             <Button 
               type="submit" 
               className="w-full bg-chat-primary hover:bg-chat-secondary"
-              disabled={!connected || inputValue.trim().length < 2}
+              disabled={!connected || inputValue.trim().length < 2 || isCheckingUsername}
             >
-              Join Chat
+              {isCheckingUsername ? 'Checking availability...' : 'Join Chat'}
             </Button>
           </CardFooter>
         </form>

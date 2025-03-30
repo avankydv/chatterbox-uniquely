@@ -4,13 +4,18 @@ import { ChatProvider, useChat } from '@/context/ChatContext';
 import LoginForm from '@/components/LoginForm';
 import ChatRoom from '@/components/ChatRoom';
 import MobileDrawer from '@/components/MobileDrawer';
+import SelectChatPartner from '@/components/SelectChatPartner';
 
 const ChatApp = () => {
-  const { isLoggedIn } = useChat();
+  const { isLoggedIn, isInChat } = useChat();
 
   return (
     <>
-      {!isLoggedIn ? <LoginForm /> : (
+      {!isLoggedIn ? (
+        <LoginForm />
+      ) : !isInChat ? (
+        <SelectChatPartner />
+      ) : (
         <>
           <ChatRoom />
           <MobileDrawer />

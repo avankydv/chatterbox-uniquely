@@ -20,23 +20,33 @@ export interface Message {
 interface ChatContextType {
   username: string;
   setUsername: (username: string) => void;
+  targetUsername: string;
+  setTargetUsername: (username: string) => void;
   isLoggedIn: boolean;
+  isInChat: boolean;
   login: () => void;
   logout: () => void;
+  startChat: () => void;
   users: User[];
   messages: Message[];
   sendMessage: (text: string) => void;
+  checkUsernameAvailability: (username: string) => Promise<boolean>;
 }
 
 const ChatContext = createContext<ChatContextType>({
   username: '',
   setUsername: () => {},
+  targetUsername: '',
+  setTargetUsername: () => {},
   isLoggedIn: false,
+  isInChat: false,
   login: () => {},
   logout: () => {},
+  startChat: () => {},
   users: [],
   messages: [],
   sendMessage: () => {},
+  checkUsernameAvailability: async () => true,
 });
 
 export const useChat = () => useContext(ChatContext);
@@ -46,13 +56,26 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   const { toast } = useToast();
   
   const [username, setUsername] = useState('');
+  const [targetUsername, setTargetUsername] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isInChat, setIsInChat] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [userId, setUserId] = useState('');
 
   const generateId = () => {
     return Math.random().toString(36).substring(2, 9);
+  };
+
+  const checkUsernameAvailability = async (usernameToCheck: string): Promise<boolean> => {
+    if (!socket || !connected) {
+      throw new Error("Not connected to server");
+    }
+    
+    // Check if the username is already in the users list
+    return !users.some(user => 
+      user.username.toLowerCase() === usernameToCheck.toLowerCase()
+    );
   };
 
   const login = () => {
@@ -107,6 +130,34 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
     });
   };
 
+  const startChat = () => {
+    if (!targetUsername) {
+      toast({
+        title: "Select a user",
+        description: "Please select a user to chat with",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsInChat(true);
+    setMessages([
+      {
+        id: generateId(),
+        text: `You started a chat with ${targetUsername}`,
+        userId: 'system',
+        username: 'System',
+        timestamp: Date.now(),
+        type: 'notification'
+      }
+    ]);
+    
+    toast({
+      title: "Chat started",
+      description: `You are now chatting with ${targetUsername}`,
+    });
+  };
+
   const logout = () => {
     if (socket && connected) {
       // Untrack presence to indicate user left
@@ -114,12 +165,14 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
     }
     
     setIsLoggedIn(false);
+    setIsInChat(false);
+    setTargetUsername('');
     setUsers([]);
     setMessages([]);
   };
 
   const sendMessage = (text: string) => {
-    if (!text.trim() || !socket || !connected || !isLoggedIn) return;
+    if (!text.trim() || !socket || !connected || !isLoggedIn || !isInChat) return;
     
     const message = {
       id: generateId(),
@@ -127,7 +180,8 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
       userId,
       username,
       timestamp: Date.now(),
-      type: 'message' as const
+      type: 'message' as const,
+      targetUsername // Include the target username
     };
     
     // Send message via Supabase Realtime broadcast
@@ -149,7 +203,10 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
       const message = payload.payload;
       
       // Only add messages from other users (not our own, since we already added those)
-      if (message.userId !== userId) {
+      // And only if it's meant for us or from the user we're chatting with
+      if (message.userId !== userId && 
+         ((message.targetUsername === username && message.username === targetUsername) || 
+          (message.username === targetUsername && !message.targetUsername))) {
         setMessages(prev => [...prev, message]);
       }
     });
@@ -250,19 +307,24 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       // No need to explicitly remove listeners, as they'll be cleaned up when the socket is unsubscribed
     };
-  }, [socket, userId]);
+  }, [socket, userId, username, targetUsername]);
 
   return (
     <ChatContext.Provider
       value={{
         username,
         setUsername,
+        targetUsername,
+        setTargetUsername,
         isLoggedIn,
+        isInChat,
         login,
         logout,
+        startChat,
         users,
         messages,
         sendMessage,
+        checkUsernameAvailability
       }}
     >
       {children}
