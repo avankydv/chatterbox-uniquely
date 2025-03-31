@@ -11,9 +11,12 @@ import { ThemeToggle } from './ThemeToggle';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 const ChatRoom = () => {
-  const { logout, targetUsername } = useChat();
-  const [showSidebar, setShowSidebar] = useState<'conversations' | 'users'>('users');
+  const { logout, targetUsername, conversations } = useChat();
+  const [showSidebar, setShowSidebar] = useState<'conversations' | 'users'>('conversations');
   const isMobile = useIsMobile();
+  
+  // Count total unread messages
+  const totalUnreadCount = conversations.reduce((total, conv) => total + conv.unreadCount, 0);
 
   return (
     <div className="flex flex-col h-screen bg-background">
@@ -32,10 +35,15 @@ const ChatRoom = () => {
               variant="outline" 
               size="sm" 
               onClick={() => setShowSidebar('conversations')}
-              className={`gap-1 ${showSidebar === 'conversations' ? 'bg-chat-tertiary' : ''}`}
+              className={`gap-1 relative ${showSidebar === 'conversations' ? 'bg-chat-tertiary' : ''}`}
             >
               <MessageCircle className="h-4 w-4" />
-              <span className="hidden sm:inline">Conversations</span>
+              <span className="hidden sm:inline">Chats</span>
+              {totalUnreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex-shrink-0 rounded-full bg-chat-primary text-white px-1.5 py-0.5 text-xs">
+                  {totalUnreadCount}
+                </span>
+              )}
             </Button>
             <Button 
               variant="outline" 

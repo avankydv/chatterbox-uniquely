@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useSocket } from './SocketContext';
 import { useToast } from '@/components/ui/use-toast';
@@ -17,9 +18,11 @@ export interface Message {
   targetUsername?: string;
 }
 
-interface Conversation {
+export interface Conversation {
   partnerUsername: string;
   messages: Message[];
+  lastMessageTime: number;
+  unreadCount: number;
 }
 
 interface ChatContextType {
@@ -183,7 +186,9 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
       // Create a new conversation
       setConversations(prev => [...prev, {
         partnerUsername: targetUsername,
-        messages: []
+        messages: [],
+        lastMessageTime: Date.now(),
+        unreadCount: 0
       }]);
     }
 
@@ -232,6 +237,14 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
         },
         ...conversation.messages
       ]);
+      
+      // Reset unread count when switching to this conversation
+      setConversations(prev => prev.map(conv => {
+        if (conv.partnerUsername === partnerUsername) {
+          return { ...conv, unreadCount: 0 };
+        }
+        return conv;
+      }));
     } else {
       setMessages([
         {
@@ -247,9 +260,13 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
       // Create a new conversation
       setConversations(prev => [...prev, {
         partnerUsername,
-        messages: []
+        messages: [],
+        lastMessageTime: Date.now(),
+        unreadCount: 0
       }]);
     }
+    
+    setIsInChat(true);
     
     toast({
       title: "Chat switched",
@@ -278,15 +295,16 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
     if (!text.trim() || !socket || !connected || !isLoggedIn || !isInChat || !targetUsername) return;
     
     const messageId = generateId();
+    const timestamp = Date.now();
     
     const message = {
       id: messageId,
       text,
       userId,
       username,
-      timestamp: Date.now(),
+      timestamp,
       type: 'message' as const,
-      targetUsername // Include the target username
+      targetUsername
     };
     
     // Add to processed message IDs immediately to prevent duplicates
@@ -302,13 +320,14 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
     // Add message to local state
     setMessages(prev => [...prev, message]);
     
-    // Update the conversation
+    // Update the conversation with new message and timestamp
     setConversations(prev => 
       prev.map(conv => {
         if (conv.partnerUsername === targetUsername) {
           return {
             ...conv,
-            messages: [...conv.messages, message]
+            messages: [...conv.messages, message],
+            lastMessageTime: timestamp
           };
         }
         return conv;
@@ -340,6 +359,7 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
           
           // Add to appropriate conversation or create new one
           const senderUsername = message.username;
+          const timestamp = message.timestamp || Date.now();
           
           setConversations(prev => {
             const existingConversationIndex = prev.findIndex(
@@ -349,16 +369,23 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
             if (existingConversationIndex >= 0) {
               // Update existing conversation
               const newConversations = [...prev];
+              // Increment unread count if not in the current conversation
+              const unreadIncrement = (senderUsername !== targetUsername) ? 1 : 0;
+              
               newConversations[existingConversationIndex] = {
                 ...newConversations[existingConversationIndex],
-                messages: [...newConversations[existingConversationIndex].messages, message]
+                messages: [...newConversations[existingConversationIndex].messages, message],
+                lastMessageTime: timestamp,
+                unreadCount: newConversations[existingConversationIndex].unreadCount + unreadIncrement
               };
               return newConversations;
             } else {
               // Create new conversation
               return [...prev, {
                 partnerUsername: senderUsername,
-                messages: [message]
+                messages: [message],
+                lastMessageTime: timestamp,
+                unreadCount: 1
               }];
             }
           });
