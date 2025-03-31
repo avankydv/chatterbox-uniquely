@@ -7,13 +7,17 @@ import { Send } from 'lucide-react';
 
 const MessageInput = () => {
   const [text, setText] = useState('');
+  const [isSending, setIsSending] = useState(false);
   const { sendMessage } = useChat();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (text.trim()) {
-      sendMessage(text);
+    if (text.trim() && !isSending) {
+      setIsSending(true);
+      await sendMessage(text);
       setText('');
+      // Small delay to prevent rapid consecutive submissions
+      setTimeout(() => setIsSending(false), 500);
     }
   };
 
@@ -29,11 +33,12 @@ const MessageInput = () => {
           onChange={(e) => setText(e.target.value)}
           placeholder="Type a message..."
           className="flex-grow"
+          disabled={isSending}
           autoFocus
         />
         <Button 
           type="submit" 
-          disabled={!text.trim()}
+          disabled={!text.trim() || isSending}
           className="bg-chat-primary hover:bg-chat-secondary text-primary-foreground"
           size="icon"
         >

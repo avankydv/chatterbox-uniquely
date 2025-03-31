@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useSocket } from './SocketContext';
 import { useToast } from '@/components/ui/use-toast';
@@ -37,7 +36,7 @@ interface ChatContextType {
   users: User[];
   messages: Message[];
   conversations: Conversation[];
-  sendMessage: (text: string) => void;
+  sendMessage: (text: string) => Promise<void>;
   checkUsernameAvailability: (username: string) => Promise<boolean>;
 }
 
@@ -55,11 +54,14 @@ const ChatContext = createContext<ChatContextType>({
   users: [],
   messages: [],
   conversations: [],
-  sendMessage: () => {},
+  sendMessage: async () => {},
   checkUsernameAvailability: async () => true,
 });
 
 export const useChat = () => useContext(ChatContext);
+
+// Local storage key for saving conversations
+const CHAT_STORAGE_KEY = 'chatterbox_conversations';
 
 export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   const { socket, connected } = useSocket();
@@ -75,6 +77,29 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   const [userId, setUserId] = useState('');
   // Track processed message IDs to prevent duplicates
   const [processedMessageIds, setProcessedMessageIds] = useState<Set<string>>(new Set());
+
+  // Load conversations from localStorage when component mounts
+  useEffect(() => {
+    try {
+      const savedConversations = localStorage.getItem(CHAT_STORAGE_KEY);
+      if (savedConversations) {
+        setConversations(JSON.parse(savedConversations));
+      }
+    } catch (error) {
+      console.error('Error loading conversations from localStorage:', error);
+    }
+  }, []);
+
+  // Save conversations to localStorage whenever they change
+  useEffect(() => {
+    if (conversations.length > 0) {
+      try {
+        localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(conversations));
+      } catch (error) {
+        console.error('Error saving conversations to localStorage:', error);
+      }
+    }
+  }, [conversations]);
 
   const generateId = () => {
     return Math.random().toString(36).substring(2, 9);
@@ -243,10 +268,13 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
     setTargetUsername('');
     setUsers([]);
     setMessages([]);
-    setConversations([]);
+    // Don't clear conversations to keep history
+    
+    // Clear processed message IDs
+    setProcessedMessageIds(new Set());
   };
 
-  const sendMessage = (text: string) => {
+  const sendMessage = async (text: string): Promise<void> => {
     if (!text.trim() || !socket || !connected || !isLoggedIn || !isInChat || !targetUsername) return;
     
     const messageId = generateId();
@@ -286,6 +314,9 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
         return conv;
       })
     );
+    
+    // Return a resolved promise to allow awaiting the send operation
+    return Promise.resolve();
   };
 
   useEffect(() => {
