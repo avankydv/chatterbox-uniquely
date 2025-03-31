@@ -7,7 +7,10 @@ import MobileDrawer from '@/components/MobileDrawer';
 import SelectChatPartner from '@/components/SelectChatPartner';
 
 const ChatApp = () => {
-  const { isLoggedIn, isInChat } = useChat();
+  const { isLoggedIn, isInChat, targetUsername } = useChat();
+
+  // Debugging the state
+  console.log("App state:", { isLoggedIn, isInChat, targetUsername });
 
   return (
     <>

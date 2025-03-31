@@ -34,6 +34,8 @@ const SelectChatPartner = () => {
       return;
     }
     
+    console.log("Starting chat with:", inputValue);
+    
     // Set the target username and start the chat
     setTargetUsername(inputValue);
     startChat();
@@ -42,6 +44,8 @@ const SelectChatPartner = () => {
   const handleUserClick = (username: string) => {
     // Set input value first
     setInputValue(username);
+    
+    console.log("Clicked on user:", username);
     
     // Then automatically submit the form to start the chat
     setTargetUsername(username);
