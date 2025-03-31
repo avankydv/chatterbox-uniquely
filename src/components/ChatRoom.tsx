@@ -6,7 +6,7 @@ import UserList from './UserList';
 import ConversationsList from './ConversationsList';
 import { Button } from '@/components/ui/button';
 import { LogOut, MessageCircle, Users } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ThemeToggle } from './ThemeToggle';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -17,6 +17,15 @@ const ChatRoom = () => {
   
   // Count total unread messages
   const totalUnreadCount = conversations.reduce((total, conv) => total + conv.unreadCount, 0);
+
+  // Set document title with unread count
+  useEffect(() => {
+    if (totalUnreadCount > 0) {
+      document.title = `(${totalUnreadCount}) ChatterBox`;
+    } else {
+      document.title = 'ChatterBox';
+    }
+  }, [totalUnreadCount]);
 
   return (
     <div className="flex flex-col h-screen bg-background">

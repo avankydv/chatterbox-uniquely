@@ -34,16 +34,26 @@ const SelectChatPartner = () => {
       return;
     }
     
+    // Set the target username and start the chat
     setTargetUsername(inputValue);
     startChat();
   };
 
+  const handleUserClick = (username: string) => {
+    // Set input value first
+    setInputValue(username);
+    
+    // Then automatically submit the form to start the chat
+    setTargetUsername(username);
+    startChat();
+  };
+
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-chat-tertiary to-white p-4">
-      <Card className="w-full max-w-md shadow-lg animate-fade-in">
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-chat-tertiary to-white dark:from-gray-800 dark:to-gray-900 p-4">
+      <Card className="w-full max-w-md shadow-lg animate-fade-in dark:bg-gray-800">
         <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-bold text-chat-primary">ChatterBox</CardTitle>
-          <CardDescription>Start chatting with any online user</CardDescription>
+          <CardTitle className="text-3xl font-bold text-chat-primary dark:text-white">ChatterBox</CardTitle>
+          <CardDescription className="dark:text-gray-300">Start chatting with any online user</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent>
@@ -53,7 +63,7 @@ const SelectChatPartner = () => {
                 placeholder="Enter username"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                className="focus:border-chat-primary"
+                className="focus:border-chat-primary dark:bg-gray-700 dark:text-white"
                 required
                 minLength={2}
                 maxLength={15}
@@ -68,23 +78,23 @@ const SelectChatPartner = () => {
               </datalist>
               
               <div className="mt-4">
-                <h3 className="font-medium mb-2">Online Users:</h3>
+                <h3 className="font-medium mb-2 dark:text-white">Online Users:</h3>
                 <ul className="max-h-40 overflow-y-auto space-y-1">
                   {users
                     .filter(user => user.username !== username)
                     .map(user => (
                       <li 
                         key={user.id} 
-                        className="px-3 py-2 rounded-md bg-chat-tertiary flex items-center cursor-pointer hover:bg-chat-secondary/20"
-                        onClick={() => setInputValue(user.username)}
+                        className="px-3 py-2 rounded-md bg-chat-tertiary dark:bg-gray-700 flex items-center cursor-pointer hover:bg-chat-secondary/20 dark:hover:bg-gray-600"
+                        onClick={() => handleUserClick(user.username)}
                       >
                         <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                        <span>{user.username}</span>
+                        <span className="dark:text-white">{user.username}</span>
                       </li>
                     ))}
                     
                   {users.filter(user => user.username !== username).length === 0 && (
-                    <li className="text-gray-500 text-sm italic">No other users online</li>
+                    <li className="text-gray-500 dark:text-gray-400 text-sm italic">No other users online</li>
                   )}
                 </ul>
               </div>
@@ -93,7 +103,7 @@ const SelectChatPartner = () => {
           <CardFooter>
             <Button 
               type="submit" 
-              className="w-full bg-chat-primary hover:bg-chat-secondary"
+              className="w-full bg-chat-primary hover:bg-chat-secondary dark:bg-chat-primary dark:hover:bg-chat-secondary"
               disabled={inputValue.trim().length < 2}
             >
               Start Chat
