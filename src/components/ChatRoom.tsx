@@ -61,7 +61,7 @@ const ChatRoom = () => {
           <MessageInput />
         </div>
         
-        <div className="hidden md:block">
+        <div className="hidden md:block w-80 border-l border-border overflow-hidden bg-card/50">
           {showSidebar === 'users' ? <UserList /> : <ConversationsList />}
         </div>
       </div>

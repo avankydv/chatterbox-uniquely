@@ -17,11 +17,11 @@ const MobileDrawer = () => {
   const [activeTab, setActiveTab] = useState<'users' | 'conversations'>('users');
 
   return (
-    <div className="md:hidden fixed bottom-4 right-4 z-10">
+    <div className="md:hidden fixed bottom-4 right-4 z-50">
       <Sheet>
         <SheetTrigger asChild>
-          <Button size="icon" className="rounded-full h-12 w-12 shadow-lg bg-chat-primary hover:bg-chat-secondary">
-            <Menu className="h-6 w-6 text-white" />
+          <Button size="icon" className="rounded-full h-14 w-14 shadow-lg bg-chat-primary hover:bg-chat-secondary">
+            <Menu className="h-6 w-6 text-primary-foreground" />
           </Button>
         </SheetTrigger>
         <SheetContent side="right" className="w-[85vw] sm:w-[400px] p-0">
@@ -50,7 +50,7 @@ const MobileDrawer = () => {
               </div>
             </SheetDescription>
           </SheetHeader>
-          <div className="h-[calc(100vh-120px)]">
+          <div className="h-[calc(100vh-120px)] overflow-y-auto">
             {activeTab === 'users' ? <UserList /> : <ConversationsList />}
           </div>
         </SheetContent>

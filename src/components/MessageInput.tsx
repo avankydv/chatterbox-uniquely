@@ -20,9 +20,9 @@ const MessageInput = () => {
   return (
     <form 
       onSubmit={handleSubmit} 
-      className="p-4 border-t border-border bg-card"
+      className="p-3 md:p-4 border-t border-border bg-card"
     >
-      <div className="flex space-x-2">
+      <div className="flex space-x-2 items-center">
         <Input
           type="text"
           value={text}
@@ -34,7 +34,8 @@ const MessageInput = () => {
         <Button 
           type="submit" 
           disabled={!text.trim()}
-          className="bg-chat-primary hover:bg-chat-secondary"
+          className="bg-chat-primary hover:bg-chat-secondary text-primary-foreground"
+          size="icon"
         >
           <Send className="h-4 w-4" />
           <span className="sr-only">Send</span>

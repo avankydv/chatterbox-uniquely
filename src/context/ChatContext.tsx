@@ -249,8 +249,10 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   const sendMessage = (text: string) => {
     if (!text.trim() || !socket || !connected || !isLoggedIn || !isInChat || !targetUsername) return;
     
+    const messageId = generateId();
+    
     const message = {
-      id: generateId(),
+      id: messageId,
       text,
       userId,
       username,
@@ -258,6 +260,9 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
       type: 'message' as const,
       targetUsername // Include the target username
     };
+    
+    // Add to processed message IDs immediately to prevent duplicates
+    setProcessedMessageIds(prev => new Set([...prev, messageId]));
     
     // Send message via Supabase Realtime broadcast
     socket.send({
@@ -281,9 +286,6 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
         return conv;
       })
     );
-    
-    // Add to processed message IDs to prevent duplicates
-    setProcessedMessageIds(prev => new Set(prev).add(message.id));
   };
 
   useEffect(() => {
@@ -303,7 +305,7 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
         // Check if this message is for us
         if (message.targetUsername === username) {
           // Add to processed message IDs
-          setProcessedMessageIds(prev => new Set(prev).add(message.id));
+          setProcessedMessageIds(prev => new Set([...prev, message.id]));
           
           // Add to appropriate conversation or create new one
           const senderUsername = message.username;
